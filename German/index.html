@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2 Lektionen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .lesson-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .lesson-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+    <header class="text-center mb-6">
+        <h1 class="text-4xl font-bold text-gray-800">A2 Lektionen</h1>
+        <p class="text-lg text-gray-600 mt-2">Deutsch lernen mit interaktiven Übungen</p>
+    </header>
+    <main class="w-full max-w-3xl mx-auto">
+        <ul class="list-none p-0">
+            <li class="mb-4">
+                <a href="Lesson16.html" class="lesson-link block px-6 py-4 bg-white rounded-lg shadow-sm text-lg font-semibold text-gray-700 hover:bg-gray-50">
+                    Lektion 16: Interaktiver Vokabeltrainer
+                </a>
+            </li>
+            <!-- Add more lessons here as needed -->
+        </ul>
+    </main>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktiver Vokabeltrainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The application is designed as an interactive flashcard system. This task-oriented structure is ideal for vocabulary learning, which is the goal of the source material. The main view features a single card that can be "flipped" to reveal translations. Users can navigate through the deck, shuffle it for randomized learning, search for specific words, and filter the vocabulary by the original textbook categories ("Feste & Feiern", "Glückwünsche", etc.). This design promotes active recall and focused study sessions, making it more effective and engaging than a static list. -->
+    <!-- Visualization & Content Choices: Report Info: German vocabulary list with translations. -> Goal: Learn and memorize words. -> Presentation: Interactive flashcards. -> Interaction: Click to flip, next/previous buttons, category filters, search, shuffle. -> Justification: Active recall is a proven method for language learning. The interactions make the process dynamic and user-driven. -> Library/Method: HTML/Tailwind for structure and style, Vanilla JS for all logic. No charts or complex visualizations are needed as the data is purely textual. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .card-container {
+            perspective: 1000px;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card-container.is-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .card-front {
+            background-color: #FFFFFF;
+        }
+        .card-back {
+            background-color: #F3EFEA;
+            transform: rotateY(180deg);
+        }
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .btn-active {
+            background-color: #D6CDBF;
+            color: #4A4A4A;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-3xl mx-auto">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-gray-800">Interaktiver Vokabeltrainer</h1>
+            <p class="text-lg text-gray-600 mt-2">Feste & Feiern | Die neue Linie 1 A2.2</p>
+        </header>
+
+        <main class="w-full">
+            <div class="mb-6 p-4 bg-white/70 rounded-xl shadow-sm">
+                 <p class="text-center text-gray-700">Willkommen! Wählen Sie eine Kategorie, um mit dem Lernen zu beginnen. Klicken Sie auf eine Karte, um die Übersetzung anzuzeigen, und verwenden Sie die Pfeile, um durch die Wörter zu navigieren. Viel Erfolg!</p>
+            </div>
+            
+            <div id="controls" class="mb-6">
+                <div id="category-filters" class="flex flex-wrap justify-center gap-2 mb-4"></div>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="search-bar" placeholder="Wort suchen..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D6CDBF] focus:outline-none">
+                    <button id="shuffle-btn" class="w-full sm:w-auto btn bg-white px-6 py-2 rounded-lg shadow-sm font-semibold text-gray-700 hover:bg-gray-50">Mischen Shuffle</button>
+                </div>
+            </div>
+
+            <div id="card-area" class="w-full h-64 sm:h-72 mb-6">
+                <div id="card-container" class="card-container w-full h-full cursor-pointer">
+                    <div id="card-inner" class="card-inner">
+                        <div id="card-front" class="card-face card-front"></div>
+                        <div id="card-back" class="card-face card-back"></div>
+                    </div>
+                </div>
+                 <p id="no-words-message" class="hidden text-center text-gray-500 h-full flex items-center justify-center">Keine Wörter in dieser Kategorie gefunden.</p>
+            </div>
+
+            <div id="navigation" class="flex items-center justify-between">
+                <button id="prev-btn" class="btn bg-white px-6 py-3 rounded-lg shadow-sm font-semibold text-gray-700 hover:bg-gray-50">← Zurück</button>
+                <div id="card-counter" class="text-lg font-medium text-gray-600">0 / 0</div>
+                <button id="next-btn" class="btn bg-white px-6 py-3 rounded-lg shadow-sm font-semibold text-gray-700 hover:bg-gray-50">Weiter →</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const vocabulary = [
+            { de: "der Karneval", en: "Carnival", az: "Karnaval", cat: "Feste & Feiern" },
+            { de: "Ostern", en: "Easter", az: "Pasxa", cat: "Feste & Feiern" },
+            { de: "Silvester", en: "New Year's Eve", az: "Yeni il axşamı", cat: "Feste & Feiern" },
+            { de: "Neujahr", en: "New Year's Day", az: "Yeni il günü", cat: "Feste & Feiern" },
+            { de: "der Geburtstag", en: "birthday", az: "ad günü", cat: "Feste & Feiern" },
+            { de: "das Nachbarschaftsfest", en: "neighborhood party", az: "qonşuluq şənliyi", cat: "Feste & Feiern" },
+            { de: "die Schulabschlussfeier", en: "school graduation party", az: "məzuniyyət gecəsi", cat: "Feste & Feiern" },
+            { de: "die Abschiedsfeier", en: "farewell party", az: "vida gecəsi", cat: "Feste & Feiern" },
+            { de: "die Einzugsparty", en: "housewarming party", az: "yeni ev şənliyi", cat: "Feste & Feiern" },
+            { de: "die Maske", en: "mask", az: "maska", cat: "Feste & Feiern" },
+            { de: "sich verkleiden", en: "to dress up, wear a costume", az: "karnaval geyimi geyinmək", cat: "Feste & Feiern" },
+            { de: "der Gast", en: "guest", az: "qonaq", cat: "Feste & Feiern" },
+            { de: "feiern", en: "to celebrate", az: "qeyd etmək", cat: "Feste & Feiern" },
+            { de: "die Laune", en: "mood", az: "əhval-ruhiyyə", cat: "Feste & Feiern" },
+            { de: "der Uniabschluss", en: "university graduation", az: "universitet məzuniyyəti", cat: "Feste & Feiern" },
+            { de: "stattfinden", en: "to take place", az: "baş tutmaq, keçirilmək", cat: "Feste & Feiern" },
+            { de: "das Büfett", en: "buffet", az: "bufet", cat: "Feste & Feiern" },
+            { de: "die Bank", en: "bench", az: "skamya", cat: "Feste & Feiern" },
+            { de: "die Mitternacht", en: "midnight", az: "gecə yarısı", cat: "Feste & Feiern" },
+            { de: "dagegen", en: "against it", az: "əleyhinə", cat: "Feste & Feiern" },
+            { de: "dafür", en: "for it", az: "lehinə", cat: "Feste & Feiern" },
+            { de: "einverstanden", en: "in agreement, agreed", az: "razıyam", cat: "Feste & Feiern" },
+            { de: "der Ort", en: "place, location", az: "yer", cat: "Feste & Feiern" },
+            { de: "der Termin", en: "appointment, date", az: "görüş vaxtı", cat: "Feste & Feiern" },
+            { de: "das Programm", en: "program", az: "proqram", cat: "Feste & Feiern" },
+            { de: "das Wetter", en: "the weather", az: "hava", cat: "Feste & Feiern" },
+            { de: "bei jedem Wetter", en: "in any weather", az: "istənilən havada", cat: "Feste & Feiern" },
+            { de: "das Festessen", en: "feast, festive meal", az: "ziyafət yeməyi", cat: "Feste & Feiern" },
+            { de: "der Erfolg", en: "success", az: "uğur", cat: "Feste & Feiern" },
+            { de: "der Abschied", en: "farewell, goodbye", az: "vida", cat: "Feste & Feiern" },
+            { de: "langjährig", en: "long-standing, for many years", az: "çoxillik, uzunmüddətli", cat: "Feste & Feiern" },
+            { de: "die Zusammenarbeit", en: "cooperation, collaboration", az: "əməkdaşlıq", cat: "Feste & Feiern" },
+            { de: "bedauern", en: "to regret", az: "təəssüflənmək", cat: "Feste & Feiern" },
+            { de: "verlassen", en: "to leave", az: "tərk etmək", cat: "Feste & Feiern" },
+            { de: "genießen", en: "to enjoy", az: "həzz almaq, zövq almaq", cat: "Feste & Feiern" },
+            { de: "der Ruhestand", en: "retirement", az: "təqaüd", cat: "Feste & Feiern" },
+            { de: "die Glückwunschkarte", en: "greeting card", az: "təbrik açıqcası", cat: "Feste & Feiern" },
+            { de: "gratulieren", en: "to congratulate", az: "təbrik etmək", cat: "Feste & Feiern" },
+            { de: "die Hochzeit", en: "wedding", az: "toy", cat: "Feste & Feiern" },
+            { de: "die Geburt", en: "birth", az: "doğum", cat: "Feste & Feiern" },
+            { de: "der Glückwunsch", en: "congratulation, good wish", az: "təbrik", cat: "Glückwünsche" },
+            { de: "Viel Glück!", en: "Good luck!", az: "Uğurlar!", cat: "Glückwünsche" },
+            { de: "Viel Erfolg!", en: "Much success!", az: "Böyük uğurlar!", cat: "Glückwünsche" },
+            { de: "Alles Gute zum / zur ...", en: "All the best for the ...", az: "... münasibətilə hər şeyin ən yaxşısını arzulayıram.", cat: "Glückwünsche" },
+            { de: "Alles Liebe zum / zur ...", en: "Lots of love for the ...", az: "... münasibətilə sevgilərlə.", cat: "Glückwünsche" },
+            { de: "Herzlichen Glückwunsch ...", en: "Congratulations on the ...", az: "... münasibətilə ürəkdən təbrik edirəm.", cat: "Glückwünsche" },
+            { de: "die Erfahrung", en: "experience", az: "təcrübə", cat: "Weitere Wörter" },
+            { de: "die Fortsetzung", en: "continuation", az: "davam", cat: "Weitere Wörter" },
+            { de: "wahrscheinlich", en: "probably", az: "yəqin ki, ehtimal ki", cat: "Weitere Wörter" },
+            { de: "außer", en: "except for, besides", az: "-dan/-dən başqa", cat: "Weitere Wörter" },
+            { de: "mitfeiern", en: "to celebrate with", az: "birlikdə qeyd etmək", cat: "Weitere Wörter" },
+            { de: "die Glocke", en: "bell", az: "zəng", cat: "Weitere Wörter" },
+            { de: "läuten", en: "to ring (for a bell)", az: "zəng çalmaq", cat: "Weitere Wörter" },
+            { de: "das Feuerwerk", en: "firework", az: "atəşfəşanlıq, fişəng", cat: "Weitere Wörter" },
+            { de: "die Rakete", en: "rocket", az: "raket", cat: "Weitere Wörter" },
+            { de: "wünschen", en: "to wish", az: "arzulamaq", cat: "Weitere Wörter" },
+            { de: "der Neujahrstag", en: "New Year's Day", az: "Yeni il günü", cat: "Weitere Wörter" },
+            { de: "trotzdem", en: "nevertheless, anyway", az: "buna baxmayaraq", cat: "Weitere Wörter" },
+            { de: "scharf", en: "spicy, hot", az: "acı, istiotlu", cat: "Weitere Wörter" },
+            { de: "die Müllabfuhr", en: "garbage collection", az: "zibil daşınması", cat: "Weitere Wörter" },
+            { de: "die Straßenreinigung", en: "street cleaning", az: "küçə təmizliyi", cat: "Weitere Wörter" },
+            { de: "die Umfrage", en: "survey", az: "sorğu", cat: "Weitere Wörter" },
+            { de: "das Kostüm", en: "costume", az: "kostyum", cat: "Weitere Wörter" },
+            { de: "etwas Besonderes", en: "something special", az: "xüsusi bir şey", cat: "Weitere Wörter" },
+            { de: "typisch", en: "typical", az: "tipik", cat: "Weitere Wörter" },
+            { de: "erwachsen", en: "adult, grown-up", az: "yetkin, böyük", cat: "Weitere Wörter" },
+            { de: "der/die Verwandte", en: "relative", az: "qohum", cat: "Weitere Wörter" },
+            { de: "die Kultur", en: "culture", az: "mədəniyyət", cat: "Weitere Wörter" },
+            { de: "die Tradition", en: "tradition", az: "ənənə", cat: "Weitere Wörter" },
+            { de: "gestalten", en: "to create, to design", az: "tərtib etmək, formalaşdırmaq", cat: "Weitere Wörter" },
+        ];
+
+        let currentDeck = [];
+        let originalDeck = [];
+        let currentIndex = 0;
+        let isFlipped = false;
+        let activeCategory = 'Alle';
+
+        const cardContainer = document.getElementById('card-container');
+        const cardInner = document.getElementById('card-inner');
+        const cardFront = document.getElementById('card-front');
+        const cardBack = document.getElementById('card-back');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const cardCounter = document.getElementById('card-counter');
+        const categoryFiltersContainer = document.getElementById('category-filters');
+        const shuffleBtn = document.getElementById('shuffle-btn');
+        const searchBar = document.getElementById('search-bar');
+        const noWordsMessage = document.getElementById('no-words-message');
+        const cardArea = document.getElementById('card-area');
+
+        function renderCard() {
+            isFlipped = false;
+            cardContainer.classList.remove('is-flipped');
+
+            setTimeout(() => {
+                if (currentDeck.length > 0) {
+                    cardArea.classList.remove('hidden');
+                    noWordsMessage.classList.add('hidden');
+                    const word = currentDeck[currentIndex];
+                    cardFront.innerHTML = `<h2 class="text-4xl font-bold text-center">${word.de}</h2>`;
+                    cardBack.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-2xl font-semibold text-blue-800">${word.en}</p>
+                            <p class="text-gray-500 my-2">Englisch</p>
+                            <hr class="my-4 border-gray-300 w-1/2 mx-auto">
+                            <p class="text-2xl font-semibold text-green-800">${word.az}</p>
+                            <p class="text-gray-500 mt-2">Aserbaidschanisch</p>
+                        </div>
+                    `;
+                } else {
+                     cardArea.classList.add('hidden');
+                     noWordsMessage.classList.remove('hidden');
+                }
+                updateCounter();
+            }, 150);
+        }
+
+        function updateCounter() {
+            cardCounter.textContent = `${currentDeck.length > 0 ? currentIndex + 1 : 0} / ${currentDeck.length}`;
+        }
+
+        function flipCard() {
+            if (currentDeck.length === 0) return;
+            isFlipped = !isFlipped;
+            cardContainer.classList.toggle('is-flipped');
+        }
+
+        function nextCard() {
+            if (currentDeck.length === 0) return;
+            currentIndex = (currentIndex + 1) % currentDeck.length;
+            renderCard();
+        }
+
+        function prevCard() {
+            if (currentDeck.length === 0) return;
+            currentIndex = (currentIndex - 1 + currentDeck.length) % currentDeck.length;
+            renderCard();
+        }
+
+        function shuffleDeck() {
+            for (let i = currentDeck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentDeck[i], currentDeck[j]] = [currentDeck[j], currentDeck[i]];
+            }
+            currentIndex = 0;
+            renderCard();
+        }
+
+        function filterByCategory(category) {
+            activeCategory = category;
+            searchBar.value = '';
+            if (category === 'Alle') {
+                originalDeck = [...vocabulary];
+            } else {
+                originalDeck = vocabulary.filter(word => word.cat === category);
+            }
+            currentDeck = [...originalDeck];
+            currentIndex = 0;
+            renderCard();
+            updateCategoryButtons();
+        }
+        
+        function searchWords() {
+            const searchTerm = searchBar.value.toLowerCase();
+            const baseDeck = activeCategory === 'Alle' ? vocabulary : vocabulary.filter(w => w.cat === activeCategory);
+            
+            currentDeck = baseDeck.filter(word => 
+                word.de.toLowerCase().includes(searchTerm) ||
+                word.en.toLowerCase().includes(searchTerm) ||
+                word.az.toLowerCase().includes(searchTerm)
+            );
+            currentIndex = 0;
+            renderCard();
+        }
+
+        function createCategoryButtons() {
+            const categories = ['Alle', ...new Set(vocabulary.map(word => word.cat))];
+            categories.forEach(cat => {
+                const button = document.createElement('button');
+                button.textContent = cat;
+                button.classList.add('btn', 'px-4', 'py-2', 'rounded-lg', 'bg-white', 'shadow-sm');
+                button.addEventListener('click', () => filterByCategory(cat));
+                categoryFiltersContainer.appendChild(button);
+            });
+        }
+
+        function updateCategoryButtons() {
+            const buttons = categoryFiltersContainer.querySelectorAll('button');
+            buttons.forEach(button => {
+                if (button.textContent === activeCategory) {
+                    button.classList.add('btn-active');
+                } else {
+                    button.classList.remove('btn-active');
+                }
+            });
+        }
+
+        function init() {
+            createCategoryButtons();
+            filterByCategory('Alle');
+
+            cardContainer.addEventListener('click', flipCard);
+            nextBtn.addEventListener('click', nextCard);
+            prevBtn.addEventListener('click', prevCard);
+            shuffleBtn.addEventListener('click', shuffleDeck);
+            searchBar.addEventListener('input', searchWords);
+        }
+
+        init();
+    </script>
+</body>
+</html>
